@@ -80,7 +80,14 @@ namespace OBSPortableUpdater
 
         Version GetInstalledVersion()
         {
-            if (!File.Exists(obsExe)) HardFail("obs64.exe not found.");
+            bool obsExists = File.Exists(obsExe);
+
+if (!obsExists)
+{
+    Log("OBS not found. Downloading latest version...");
+    await DownloadAndInstallLatestAsync();
+    return;
+}
             var info = FileVersionInfo.GetVersionInfo(obsExe);
             return Version.Parse(info.ProductVersion);
         }
@@ -172,3 +179,4 @@ namespace OBSPortableUpdater
         }
     }
 }
+
