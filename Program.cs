@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace OBSPortableUpdater
 {
@@ -82,11 +83,11 @@ namespace OBSPortableUpdater
         {
             bool obsExists = File.Exists(obsExe);
 
-if (!obsExists)
-{
-    Log("OBS not found. Downloading latest version...");
-    return Version.Parse("0.0");
-}
+            if (!obsExists)
+            {
+                Log("OBS not found. Downloading latest version...");
+                return Version.Parse("0.0");
+            }
             var info = FileVersionInfo.GetVersionInfo(obsExe);
             return Version.Parse(info.ProductVersion);
         }
@@ -133,6 +134,41 @@ if (!obsExists)
             }
         }
 
+        void CreateDesktopShortcut()
+        {
+            try
+            {
+                // 1. Define Paths
+                string currentDir = Directory.GetCurrentDirectory();
+
+                // The target executable path
+                string targetPath = Path.Combine(currentDir, @"obs-studio\bin\64bit\obs64.exe");
+
+                // The folder the app should "start in" (Crucial for portable apps)
+                string workingDir = Path.Combine(currentDir, @"obs-studio\bin\64bit");
+
+                // Get the current user's Desktop path
+                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                string shortcutPath = Path.Combine(desktopPath, "OBS Studio Portable.lnk");
+
+                // 2. Create the shortcut using Windows Script Host
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                dynamic shell = Activator.CreateInstance(shellType);
+                dynamic shortcut = shell.CreateShortcut(shortcutPath);
+
+                shortcut.TargetPath = targetPath;
+                shortcut.WorkingDirectory = workingDir;
+                shortcut.Description = "Launch OBS Studio in Portable Mode";
+                shortcut.Save();
+
+                Console.WriteLine($"Shortcut created successfully at: {shortcutPath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating shortcut: {ex.Message}");
+            }
+        }
+
         async Task UpdateObsAsync()
         {
             if (assetUrl == null || latestVersion == null) HardFail("No update info.");
@@ -145,7 +181,8 @@ if (!obsExists)
                 string zipFileName = Path.GetFileName(assetUrl!);
                 string zipPath = Path.Combine(root, zipFileName);
 
-                if (File.Exists(zipPath)) {
+                if (File.Exists(zipPath))
+                {
                     Log($"Deleting existing {zipFileName}...");
                     File.Delete(zipPath);
                 }
@@ -167,8 +204,25 @@ if (!obsExists)
                 Log($"Deleting {zipFileName}...");
                 File.Delete(zipPath);
 
+                // 4. Create the empty file if it doesn't exist
+                string portable_modeFile = Path.Combine(obsDir, "portable_mode");
+                if (!File.Exists(portable_modeFile))
+                {
+                    // File.Create returns a stream, so we Dispose() it immediately to close the file
+                    File.Create(portable_modeFile).Dispose();
+                    Console.WriteLine($"Created file: {portable_modeFile}");
+                }
+                else
+                {
+                    Console.WriteLine("File already exists.");
+                }
                 progress.Value = 100;
+
+                CreateDesktopShortcut();
+                Log("Shortcut created.");
+
                 Log("OBS updated successfully ✔");
+                
                 MessageBox.Show("Update complete!", "Done");
             }
             catch (Exception ex)
@@ -178,9 +232,3 @@ if (!obsExists)
         }
     }
 }
-
-
-
-
-
-
