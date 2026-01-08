@@ -85,7 +85,7 @@ namespace OBSPortableUpdater
 if (!obsExists)
 {
     Log("OBS not found. Downloading latest version...");
-    return Version.Parse(0);
+    return Version.Parse('0');
 }
             var info = FileVersionInfo.GetVersionInfo(obsExe);
             return Version.Parse(info.ProductVersion);
@@ -178,6 +178,7 @@ if (!obsExists)
         }
     }
 }
+
 
 
 
